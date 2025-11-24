@@ -1,5 +1,5 @@
 name: "Tencent COS Sync"
-description: "Upload artifacts to Tencent COS (coscmd) with optional CDN purge (tccli)."
+description: " SiFli is used for synchronizing with domestic mirroring tools for internal use"
 author: "OpenSiFli"
 
 inputs:
