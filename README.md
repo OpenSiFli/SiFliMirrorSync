@@ -31,7 +31,7 @@ jobs:
           merge-multiple: true
 
       - name: Upload to COS and optional CDN purge
-        uses: OpenSiFli/cos-sync-action@v1
+        uses: OpenSiFli/SiFliMirrorSync@v1
         with:
           secret_id: ${{ secrets.COS_DOCS_SECRET_ID }}
           secret_key: ${{ secrets.COS_DOCS_SECRET_KEY }}
