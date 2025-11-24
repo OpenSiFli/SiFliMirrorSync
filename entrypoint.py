@@ -100,8 +100,14 @@ def configure_coscmd(secret_id: str, secret_key: str, bucket: str, region: str, 
     cmd = ["coscmd", "config", "-a", secret_id, "-s", secret_key, "-b", bucket]
     if accelerate:
         cmd += ["-e", "cos.accelerate.myqcloud.com"]
+        cmd += ["--retry", "5"]
+        cmd += ["--timeout", "60"]
     else:
         cmd += ["-r", region]
+        cmd += ["--retry", "1"] # 失败了赶紧fallback到全球加速
+        cmd += ["--timeout", "10"]
+        cmd += ["-m", "1"]
+    
     run_cmd(cmd)
 
 
