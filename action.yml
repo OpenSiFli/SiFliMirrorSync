@@ -1,0 +1,39 @@
+name: "Tencent COS Sync"
+description: "Upload artifacts to Tencent COS (coscmd) with optional CDN purge (tccli)."
+author: "OpenSiFli"
+
+inputs:
+  secret_id:
+    description: "Tencent Cloud SecretId"
+    required: true
+  secret_key:
+    description: "Tencent Cloud SecretKey"
+    required: true
+  region:
+    description: "COS region, e.g. ap-singapore"
+    required: true
+  bucket:
+    description: "COS bucket name, e.g. my-bucket-123456"
+    required: true
+  prefix:
+    description: "Remote prefix (folder) to upload into. Should not include bucket."
+    required: true
+  artifacts:
+    description: "Artifact paths/globs (comma or newline separated). Directories upload recursively."
+    required: true
+  delete_remote:
+    description: "If true, delete remote objects under prefix that are not in the staged content."
+    required: false
+    default: "false"
+  flush_url:
+    description: "Optional CDN path to purge after upload."
+    required: false
+    default: ""
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+
+branding:
+  icon: "upload-cloud"
+  color: "blue"
