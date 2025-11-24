@@ -32,7 +32,7 @@ inputs:
 
 runs:
   using: "docker"
-  image: "docker://ghcr.io/OpenSiFli/SiFliMirrorSync:v1"
+  image: "docker://ghcr.io/opensifli/siflimirrorsync:v1"
 
 branding:
   icon: "upload-cloud"
