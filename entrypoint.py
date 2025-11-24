@@ -112,6 +112,8 @@ def configure_coscmd(secret_id: str, secret_key: str, bucket: str, region: str, 
 
 
 def main() -> None:
+    workspace_root = Path.cwd().resolve()
+
     secret_id = get_input("secret_id")
     secret_key = get_input("secret_key")
     region = get_input("region")
@@ -120,6 +122,18 @@ def main() -> None:
     artifacts_raw = get_input("artifacts")
     flush_url = get_input("flush_url", required=False, default="")
     delete_remote = parse_bool(get_input("delete_remote", required=False, default="false"))
+    working_dir_raw = get_input("working_directory", required=False, default="").strip()
+
+    if working_dir_raw:
+        working_dir = (workspace_root / working_dir_raw).resolve()
+        try:
+            working_dir.relative_to(workspace_root)
+        except ValueError:
+            error(f"working_directory must be inside the workspace: {working_dir}")
+        if not working_dir.is_dir():
+            error(f"working_directory does not exist or is not a directory: {working_dir}")
+        os.chdir(working_dir)
+        log(f"Using working_directory: {working_dir}")
 
     patterns = split_patterns(artifacts_raw)
     if not patterns:

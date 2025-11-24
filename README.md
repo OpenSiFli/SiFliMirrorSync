@@ -14,6 +14,7 @@ Currently based on Tencent Cloud's COS.
 - `artifacts` (required): Comma/newline-separated paths or globs; directories upload recursively. All matches are staged into one temp folder before upload.
 - `delete_remote` (optional, default `false`): If `true`, remote files under `prefix` that are not in the staged content are deleted.
 - `flush_url` (optional): CDN path to purge; when empty, purge step is skipped.
+- `working_directory` (optional): If set, the action `cd`s into this path before resolving globs, so staged paths are relative to it.
 
 ## Example
 

@@ -29,6 +29,10 @@ inputs:
     description: "Optional CDN path to purge after upload."
     required: false
     default: ""
+  working_directory:
+    description: "Optional working directory to cd into before resolving artifact globs."
+    required: false
+    default: ""
 
 runs:
   using: "docker"
