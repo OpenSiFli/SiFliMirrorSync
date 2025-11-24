@@ -73,14 +73,17 @@ def stage_paths(paths: list[Path], staging_root: Path) -> None:
         dest = staging_root / rel
 
         if src.is_dir():
-            if dest.exists():
-                error(f"Collision while staging directory: {dest}")
+            if dest.exists() and dest.is_file():
+                error(f"Collision while staging directory (file already staged here): {dest}")
             dest.parent.mkdir(parents=True, exist_ok=True)
             log(f"Staging directory: {rel}")
-            shutil.copytree(abs_src, dest)
+            shutil.copytree(abs_src, dest, dirs_exist_ok=True)
         elif src.is_file():
             if dest.exists():
-                error(f"Collision while staging file: {dest}")
+                if dest.is_file():
+                    log(f"Skipping already staged file from overlapping glob: {rel}")
+                    continue
+                error(f"Collision while staging file (directory already staged here): {dest}")
             dest.parent.mkdir(parents=True, exist_ok=True)
             log(f"Staging file: {rel}")
             shutil.copy2(abs_src, dest)
