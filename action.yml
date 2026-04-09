@@ -53,6 +53,17 @@ runs:
     - name: Run Tencent COS sync
       shell: bash
       run: python "${{ github.action_path }}/entrypoint.py"
+      env:
+        INPUT_SECRET_ID: ${{ inputs.secret_id }}
+        INPUT_SECRET_KEY: ${{ inputs.secret_key }}
+        INPUT_REGION: ${{ inputs.region }}
+        INPUT_BUCKET: ${{ inputs.bucket }}
+        INPUT_PREFIX: ${{ inputs.prefix }}
+        INPUT_ARTIFACTS: ${{ inputs.artifacts }}
+        INPUT_DELETE_REMOTE: ${{ inputs.delete_remote }}
+        INPUT_FLUSH_URL: ${{ inputs.flush_url }}
+        INPUT_GLOBAL: ${{ inputs.global }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working_directory }}
 
 branding:
   icon: "upload-cloud"
