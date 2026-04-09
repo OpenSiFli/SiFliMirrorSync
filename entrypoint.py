@@ -28,13 +28,13 @@ def get_input(name: str, required: bool = True, default: str | None = None) -> s
     return val
 
 
-def parse_bool(val: str) -> bool:
+def parse_bool(name: str, val: str) -> bool:
     normalized = val.strip().lower()
     if normalized in ("true", "1", "yes", "y"):
         return True
     if normalized in ("false", "0", "no", "n", ""):
         return False
-    error(f"Invalid boolean value for delete_remote: {val}")
+    error(f"Invalid boolean value for {name}: {val}")
     return False
 
 
@@ -96,9 +96,9 @@ def run_cmd(cmd: list[str], cwd: Path | None = None, env: dict[str, str] | None 
     subprocess.run(cmd, check=True, cwd=str(cwd) if cwd else None, env=env)
 
 
-def configure_coscmd(secret_id: str, secret_key: str, bucket: str, region: str, accelerate: bool = False) -> None:
+def configure_coscmd(secret_id: str, secret_key: str, bucket: str, region: str, use_global: bool = False) -> None:
     cmd = ["coscmd", "config", "-a", secret_id, "-s", secret_key, "-b", bucket]
-    if accelerate:
+    if use_global:
         cmd += ["-e", "cos.accelerate.myqcloud.com"]
         cmd += ["--retry", "5"]
         cmd += ["--timeout", "60"]
@@ -121,7 +121,8 @@ def main() -> None:
     prefix = normalize_prefix(get_input("prefix"))
     artifacts_raw = get_input("artifacts")
     flush_url = get_input("flush_url", required=False, default="")
-    delete_remote = parse_bool(get_input("delete_remote", required=False, default="false"))
+    delete_remote = parse_bool("delete_remote", get_input("delete_remote", required=False, default="false"))
+    global_mode = parse_bool("global", get_input("global", required=False, default="false"))
     working_dir_raw = get_input("working_directory", required=False, default="").strip()
 
     if working_dir_raw:
@@ -141,8 +142,12 @@ def main() -> None:
 
     paths = resolve_paths(patterns)
 
-    log("Configuring coscmd (regional endpoint)")
-    configure_coscmd(secret_id, secret_key, bucket, region, accelerate=False)
+    if global_mode:
+        log("Configuring coscmd (global accelerate endpoint)")
+        configure_coscmd(secret_id, secret_key, bucket, region, use_global=True)
+    else:
+        log("Configuring coscmd (regional endpoint)")
+        configure_coscmd(secret_id, secret_key, bucket, region, use_global=False)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         staging_root = Path(tmpdir)
@@ -158,16 +163,19 @@ def main() -> None:
                 ["coscmd", "upload", *flags, ".", prefix],
                 cwd=staging_root,
             )
-        except CalledProcessError:
+        except CalledProcessError as exc:
+            if global_mode:
+                error(f"Upload failed with global accelerate endpoint: {exc}")
+
             log("Upload failed with regional endpoint, retrying with global accelerate endpoint")
-            configure_coscmd(secret_id, secret_key, bucket, region, accelerate=True)
+            configure_coscmd(secret_id, secret_key, bucket, region, use_global=True)
             try:
                 run_cmd(
                     ["coscmd", "upload", *flags, ".", prefix],
                     cwd=staging_root,
                 )
-            except CalledProcessError as exc:
-                error(f"Upload failed after retry with accelerate endpoint: {exc}")
+            except CalledProcessError as retry_exc:
+                error(f"Upload failed after retry with accelerate endpoint: {retry_exc}")
 
     if flush_url:
         log(f"Purge CDN cache: {flush_url}")

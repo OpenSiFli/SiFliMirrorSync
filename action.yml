@@ -29,14 +29,32 @@ inputs:
     description: "Optional CDN path to purge after upload."
     required: false
     default: ""
+  global:
+    description: "If true, configure coscmd to use the global accelerate endpoint from the first upload attempt."
+    required: false
+    default: "false"
   working_directory:
     description: "Optional working directory to cd into before resolving artifact globs."
     required: false
     default: ""
 
 runs:
-  using: "docker"
-  image: "docker://ghcr.io/opensifli/siflimirrorsync:v1"
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: "pip"
+        cache-dependency-path: "${{ github.action_path }}/requirements.txt"
+
+    - name: Install dependencies
+      shell: bash
+      run: python -m pip install --disable-pip-version-check -r "${{ github.action_path }}/requirements.txt"
+
+    - name: Run Tencent COS sync
+      shell: bash
+      run: python "${{ github.action_path }}/entrypoint.py"
 
 branding:
   icon: "upload-cloud"
