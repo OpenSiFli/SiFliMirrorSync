@@ -19,8 +19,9 @@ inputs:
     description: "Remote prefix (folder) to upload into. Should not include bucket."
     required: true
   artifacts:
-    description: "Artifact paths/globs (comma or newline separated). Directories upload recursively."
-    required: true
+    description: "Artifact paths/globs (comma or newline separated). Directories upload recursively. Leave empty to skip upload and only flush CDN cache."
+    required: false
+    default: ""
   delete_remote:
     description: "If true, delete remote objects under prefix that are not in the staged content."
     required: false

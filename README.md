@@ -11,7 +11,7 @@ Currently based on Tencent Cloud's COS.
 - `region` (required): COS region (e.g. `ap-nanjing`).
 - `bucket` (required): COS bucket name (e.g. `my-bucket-123456`).
 - `prefix` (required): Remote prefix/folder to upload into (trailing slash added automatically).
-- `artifacts` (required): Comma/newline-separated paths or globs; directories upload recursively. All matches are staged into one temp folder before upload.
+- `artifacts` (optional): Comma/newline-separated paths or globs; directories upload recursively. All matches are staged into one temp folder before upload. Leave empty to skip upload and only flush CDN cache (requires `flush_url`).
 - `delete_remote` (optional, default `false`): If `true`, remote files under `prefix` that are not in the staged content are deleted.
 - `flush_url` (optional): CDN path to purge; when empty, purge step is skipped.
 - `global` (optional, default `false`): If `true`, start with the global accelerate endpoint instead of trying the regional endpoint first.
@@ -44,6 +44,25 @@ jobs:
           delete_remote: true
           global: true
           flush_url: https://downloads.sifli.com/github_assets/OpenSiFli/sftool/releases/download/
+```
+
+### Flush-only (no upload)
+
+```yaml
+jobs:
+  purge-cdn:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge CDN cache
+        uses: OpenSiFli/SiFliMirrorSync@v1
+        with:
+          secret_id: ${{ secrets.COS_DOCS_SECRET_ID }}
+          secret_key: ${{ secrets.COS_DOCS_SECRET_KEY }}
+          region: ${{ secrets.COS_DOWNLOAD_REGION }}
+          bucket: placeholder     # still required by schema but unused
+          prefix: placeholder/    # still required by schema but unused
+          artifacts: ""           # empty → flush-only mode
+          flush_url: https://downloads.sifli.com/github_assets/
 ```
 
 ## Notes
