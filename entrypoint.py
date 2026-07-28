@@ -111,6 +111,19 @@ def configure_coscmd(secret_id: str, secret_key: str, bucket: str, region: str, 
     run_cmd(cmd)
 
 
+def purge_cdn_cache(flush_url: str, secret_id: str, secret_key: str, region: str) -> None:
+    """Purge CDN cache via tccli."""
+    log(f"Purge CDN cache: {flush_url}")
+    env = os.environ.copy()
+    env["TENCENTCLOUD_SECRET_ID"] = secret_id
+    env["TENCENTCLOUD_SECRET_KEY"] = secret_key
+    env["TENCENTCLOUD_REGION"] = region
+    run_cmd(
+        ["tccli", "cdn", "PurgePathCache", "--cli-unfold-argument", "--Paths", flush_url, "--FlushType", "flush"],
+        env=env,
+    )
+
+
 def main() -> None:
     workspace_root = Path.cwd().resolve()
 
@@ -119,7 +132,7 @@ def main() -> None:
     region = get_input("region")
     bucket = get_input("bucket")
     prefix = normalize_prefix(get_input("prefix"))
-    artifacts_raw = get_input("artifacts")
+    artifacts_raw = get_input("artifacts", required=False, default="")
     flush_url = get_input("flush_url", required=False, default="")
     delete_remote = parse_bool("delete_remote", get_input("delete_remote", required=False, default="false"))
     global_mode = parse_bool("global", get_input("global", required=False, default="false"))
@@ -137,56 +150,53 @@ def main() -> None:
         log(f"Using working_directory: {working_dir}")
 
     patterns = split_patterns(artifacts_raw)
-    if not patterns:
-        error("No artifact patterns provided after normalization")
 
-    paths = resolve_paths(patterns)
+    if patterns:
+        # ── Upload path ──────────────────────────────────────────────
+        paths = resolve_paths(patterns)
 
-    if global_mode:
-        log("Configuring coscmd (global accelerate endpoint)")
-        configure_coscmd(secret_id, secret_key, bucket, region, use_global=True)
-    else:
-        log("Configuring coscmd (regional endpoint)")
-        configure_coscmd(secret_id, secret_key, bucket, region, use_global=False)
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        staging_root = Path(tmpdir)
-        log(f"Staging uploads in: {staging_root}")
-        stage_paths(paths, staging_root)
-
-        flags = ["-rs", "--yes"]
-        if delete_remote:
-            flags.append("--delete")
-
-        try:
-            run_cmd(
-                ["coscmd", "upload", *flags, ".", prefix],
-                cwd=staging_root,
-            )
-        except CalledProcessError as exc:
-            if global_mode:
-                error(f"Upload failed with global accelerate endpoint: {exc}")
-
-            log("Upload failed with regional endpoint, retrying with global accelerate endpoint")
+        if global_mode:
+            log("Configuring coscmd (global accelerate endpoint)")
             configure_coscmd(secret_id, secret_key, bucket, region, use_global=True)
+        else:
+            log("Configuring coscmd (regional endpoint)")
+            configure_coscmd(secret_id, secret_key, bucket, region, use_global=False)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            staging_root = Path(tmpdir)
+            log(f"Staging uploads in: {staging_root}")
+            stage_paths(paths, staging_root)
+
+            flags = ["-rs", "--yes"]
+            if delete_remote:
+                flags.append("--delete")
+
             try:
                 run_cmd(
                     ["coscmd", "upload", *flags, ".", prefix],
                     cwd=staging_root,
                 )
-            except CalledProcessError as retry_exc:
-                error(f"Upload failed after retry with accelerate endpoint: {retry_exc}")
+            except CalledProcessError as exc:
+                if global_mode:
+                    error(f"Upload failed with global accelerate endpoint: {exc}")
+
+                log("Upload failed with regional endpoint, retrying with global accelerate endpoint")
+                configure_coscmd(secret_id, secret_key, bucket, region, use_global=True)
+                try:
+                    run_cmd(
+                        ["coscmd", "upload", *flags, ".", prefix],
+                        cwd=staging_root,
+                    )
+                except CalledProcessError as retry_exc:
+                    error(f"Upload failed after retry with accelerate endpoint: {retry_exc}")
+    else:
+        # ── No artifacts — flush-only mode ───────────────────────────
+        if not flush_url:
+            error("No artifacts provided and no flush_url configured — nothing to do")
+        log("No artifacts provided; skipping upload")
 
     if flush_url:
-        log(f"Purge CDN cache: {flush_url}")
-        env = os.environ.copy()
-        env["TENCENTCLOUD_SECRET_ID"] = secret_id
-        env["TENCENTCLOUD_SECRET_KEY"] = secret_key
-        env["TENCENTCLOUD_REGION"] = region
-        run_cmd(
-            ["tccli", "cdn", "PurgePathCache", "--cli-unfold-argument", "--Paths", flush_url, "--FlushType", "flush"],
-            env=env,
-        )
+        purge_cdn_cache(flush_url, secret_id, secret_key, region)
     else:
         log("flush_url not provided; skipping CDN purge")
 
