@@ -173,7 +173,7 @@ def main() -> None:
 
             try:
                 run_cmd(
-                    ["coscmd", "upload", *flags, ".", prefix],
+                    ["coscmd", "upload", *flags, "./", prefix],
                     cwd=staging_root,
                 )
             except CalledProcessError as exc:
@@ -184,7 +184,7 @@ def main() -> None:
                 configure_coscmd(secret_id, secret_key, bucket, region, use_global=True)
                 try:
                     run_cmd(
-                        ["coscmd", "upload", *flags, ".", prefix],
+                        ["coscmd", "upload", *flags, "./", prefix],
                         cwd=staging_root,
                     )
                 except CalledProcessError as retry_exc:
